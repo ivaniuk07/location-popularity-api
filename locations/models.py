@@ -1,7 +1,9 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models.functions import Lower
+from django.utils import timezone
 
 
 class Category(models.Model):
@@ -23,7 +25,14 @@ class Category(models.Model):
         return self.name
 
 
+class LocationQuerySet(models.QuerySet):
+    def active(self):
+        return self.filter(deleted_at__isnull=True)
+
+
 class Location(models.Model):
+    objects = LocationQuerySet.as_manager()
+
     name = models.CharField(max_length=200)
     description = models.TextField()
     category = models.ForeignKey(
@@ -70,6 +79,11 @@ class Location(models.Model):
     def __str__(self):
         return self.name
 
+    def soft_delete(self):
+        if self.deleted_at is None:
+            self.deleted_at = timezone.now()
+            self.save(update_fields=["deleted_at", "updated_at"])
+
 
 class Review(models.Model):
     location = models.ForeignKey(
@@ -100,6 +114,19 @@ class Review(models.Model):
                 name="review_rating_1_5",
             ),
         ]
+
+    def clean(self):
+        super().clean()
+        if self.location_id and Location.objects.filter(
+            pk=self.location_id, deleted_at__isnull=False
+        ).exists():
+            raise ValidationError({
+                "location": "Не можна додати відгук до видаленої локації."
+            })
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.rating}/5 — {self.location.name}"
@@ -135,6 +162,19 @@ class ReviewVote(models.Model):
                 name="review_vote_value_valid",
             ),
         ]
+
+    def clean(self):
+        super().clean()
+        if self.review_id and Review.objects.filter(
+            pk=self.review_id, location__deleted_at__isnull=False
+        ).exists():
+            raise ValidationError({
+                "review": "Не можна голосувати за відгук видаленої локації."
+            })
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.user} — {self.get_vote_display()} — {self.review}"
