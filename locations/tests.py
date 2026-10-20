@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
-from rest_framework.test import APITestCase
+from rest_framework.test import APITransactionTestCase
 
 from .models import Category, Location, Review, ReviewVote
 
@@ -8,7 +8,7 @@ from .models import Category, Location, Review, ReviewVote
 User = get_user_model()
 
 
-class CategoryAPITests(APITestCase):
+class CategoryAPITests(APITransactionTestCase):
     def setUp(self):
         self.category = Category.objects.create(name="Parks")
         self.member = User.objects.create_user(
@@ -108,7 +108,7 @@ class CategoryAPITests(APITestCase):
         self.assertTrue(Category.objects.filter(pk=self.category.pk).exists())
 
 
-class LocationAPITests(APITestCase):
+class LocationAPITests(APITransactionTestCase):
     def setUp(self):
         self.category = Category.objects.create(name="Parks")
         self.author = User.objects.create_user(
@@ -244,7 +244,7 @@ class LocationAPITests(APITestCase):
             self.assertEqual(response.status_code, 400)
 
 
-class ReviewAPITests(APITestCase):
+class ReviewAPITests(APITransactionTestCase):
     def setUp(self):
         self.category = Category.objects.create(name="Parks")
         self.location = Location.objects.create(

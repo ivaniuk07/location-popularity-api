@@ -4,13 +4,13 @@ from django.contrib.auth import get_user_model
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
-from rest_framework.test import APITestCase
+from rest_framework.test import APITransactionTestCase
 
 from .models import Category, Location, LocationView, Review
 from .services import with_location_stats
 
 
-class LocationPopularityTests(APITestCase):
+class LocationPopularityTests(APITransactionTestCase):
     def setUp(self):
         self.category = Category.objects.create(name="Parks")
         self.location = self.make_location("City park")

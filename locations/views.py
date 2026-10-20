@@ -3,13 +3,18 @@ from django.db import IntegrityError, transaction
 from django.db.models.deletion import ProtectedError
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, serializers, status, viewsets
 from rest_framework.exceptions import NotFound
+from rest_framework.filters import SearchFilter
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .cache import cache_location_list, get_cached_location_list
+from .filters import LocationFilter
 from .models import Category, Location, Review, ReviewVote
+from .ordering import StableOrderingFilter
 from .pagination import StandardPagination
 from .permissions import IsAdminOrReadOnly, IsAuthorOrAdminOrReadOnly
 from .serializers import (
@@ -58,11 +63,24 @@ class LocationViewSet(viewsets.ModelViewSet):
     serializer_class = LocationSerializer
     permission_classes = [IsAuthorOrAdminOrReadOnly]
     pagination_class = StandardPagination
+    filter_backends = [DjangoFilterBackend, SearchFilter, StableOrderingFilter]
+    filterset_class = LocationFilter
+    search_fields = ["name", "description"]
+    ordering_fields = ["created_at", "rating", "popularity"]
+    ordering = ["-created_at", "-id"]
 
     def get_queryset(self):
         return with_location_stats(
             Location.objects.active().select_related("category", "author")
         ).order_by("-created_at", "-id")
+
+    def list(self, request, *args, **kwargs):
+        redis, key, cached = get_cached_location_list(request)
+        if cached is not None:
+            return Response(cached)
+        response = super().list(request, *args, **kwargs)
+        cache_location_list(redis, key, response.data)
+        return response
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)

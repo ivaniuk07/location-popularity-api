@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
-from rest_framework.test import APIClient, APITestCase
+from rest_framework.test import APIClient, APITransactionTestCase
 
 from .models import Category, Location, LocationView
 from .services import GUEST_SESSION_KEY, record_location_view
@@ -33,7 +33,7 @@ class FakeRedis:
         self.now += seconds
 
 
-class LocationViewCountingTests(APITestCase):
+class LocationViewCountingTests(APITransactionTestCase):
     def setUp(self):
         self.redis = FakeRedis()
         redis_patch = patch(
