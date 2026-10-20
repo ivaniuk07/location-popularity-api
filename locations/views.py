@@ -18,6 +18,7 @@ from .serializers import (
     ReviewSerializer,
     ReviewVoteSerializer,
 )
+from .services import record_location_view, with_location_stats
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -54,17 +55,24 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 
 class LocationViewSet(viewsets.ModelViewSet):
-    queryset = (
-        Location.objects.active()
-        .select_related("category", "author")
-        .order_by("-created_at", "-id")
-    )
     serializer_class = LocationSerializer
     permission_classes = [IsAuthorOrAdminOrReadOnly]
     pagination_class = StandardPagination
 
+    def get_queryset(self):
+        return with_location_stats(
+            Location.objects.active().select_related("category", "author")
+        ).order_by("-created_at", "-id")
+
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if request.method == "GET":
+            record_location_view(instance, request)
+            instance = self.get_queryset().get(pk=instance.pk)
+        return Response(self.get_serializer(instance).data)
 
     def perform_destroy(self, instance):
         instance.soft_delete()

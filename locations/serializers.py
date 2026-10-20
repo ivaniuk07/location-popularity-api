@@ -21,6 +21,11 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class LocationSerializer(serializers.ModelSerializer):
+    rating = serializers.FloatField(read_only=True, default=0.0)
+    review_count = serializers.IntegerField(read_only=True, default=0)
+    views_last_7_days = serializers.IntegerField(read_only=True, default=0)
+    popularity = serializers.FloatField(read_only=True, default=0.0)
+
     class Meta:
         model = Location
         fields = (
@@ -32,6 +37,10 @@ class LocationSerializer(serializers.ModelSerializer):
             "latitude",
             "longitude",
             "author",
+            "rating",
+            "review_count",
+            "views_last_7_days",
+            "popularity",
             "created_at",
             "updated_at",
             "deleted_at",
@@ -39,6 +48,10 @@ class LocationSerializer(serializers.ModelSerializer):
         read_only_fields = (
             "id",
             "author",
+            "rating",
+            "review_count",
+            "views_last_7_days",
+            "popularity",
             "created_at",
             "updated_at",
             "deleted_at",

@@ -170,8 +170,8 @@ class LocationAPITests(APITestCase):
         self.assertEqual(created.author_id, self.other_user.pk)
         self.assertIsNone(created.deleted_at)
         self.assertNotEqual(created.created_at.year, 2000)
-        self.assertNotIn("rating", response.data)
-        self.assertNotIn("popularity", response.data)
+        self.assertEqual(response.data["rating"], 0)
+        self.assertEqual(response.data["popularity"], 0)
 
     def test_only_author_or_admin_can_edit_and_delete(self):
         url = f"/api/locations/{self.location.pk}/"
