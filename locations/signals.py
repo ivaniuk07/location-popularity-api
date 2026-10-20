@@ -3,6 +3,7 @@ from django.dispatch import receiver
 
 from .cache import invalidate_location_list_after_commit
 from .models import Category, Location, LocationView, Review
+from .notifications import notify_review_after_commit
 
 
 @receiver(post_save, sender=Category)
@@ -15,3 +16,9 @@ from .models import Category, Location, LocationView, Review
 @receiver(post_delete, sender=LocationView)
 def invalidate_list_for_data_change(sender, using, **kwargs):
     invalidate_location_list_after_commit(using=using)
+
+
+@receiver(post_save, sender=Review)
+def notify_about_new_review(sender, instance, created, using, **kwargs):
+    if created:
+        notify_review_after_commit(instance.pk, using=using)

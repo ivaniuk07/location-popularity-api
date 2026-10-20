@@ -9,11 +9,13 @@ from rest_framework.exceptions import NotFound
 from rest_framework.filters import SearchFilter
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
+from rest_framework.decorators import action
 from rest_framework.views import APIView
 
 from .cache import cache_location_list, get_cached_location_list
+from .export import export_locations
 from .filters import LocationFilter
-from .models import Category, Location, Review, ReviewVote
+from .models import Category, Location, LocationSubscription, Review, ReviewVote
 from .ordering import StableOrderingFilter
 from .pagination import StandardPagination
 from .permissions import IsAdminOrReadOnly, IsAuthorOrAdminOrReadOnly
@@ -81,6 +83,37 @@ class LocationViewSet(viewsets.ModelViewSet):
         response = super().list(request, *args, **kwargs)
         cache_location_list(redis, key, response.data)
         return response
+
+    @action(detail=False, methods=["get"], url_path="export")
+    def export(self, request):
+        file_format = request.query_params.get("format", "json").lower()
+        if file_format not in {"json", "csv"}:
+            raise serializers.ValidationError({"format": "Оберіть json або csv."})
+        queryset = self.filter_queryset(self.get_queryset())
+        return export_locations(queryset, file_format)
+
+    @action(
+        detail=True,
+        methods=["put", "delete"],
+        url_path="subscription",
+        permission_classes=[IsAuthenticated],
+    )
+    def subscription(self, request, pk=None):
+        if request.method == "DELETE":
+            location = get_object_or_404(Location, pk=pk)
+            LocationSubscription.objects.filter(
+                location=location, user=request.user
+            ).delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        location = get_object_or_404(Location.objects.active(), pk=pk)
+        try:
+            LocationSubscription.objects.get_or_create(
+                location=location, user=request.user
+            )
+        except DjangoValidationError:
+            raise NotFound("Локація недоступна.")
+        return Response({"subscribed": True})
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)

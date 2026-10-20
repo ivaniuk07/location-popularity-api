@@ -206,3 +206,41 @@ class LocationView(models.Model):
 
     def __str__(self):
         return f"Перегляд {self.location.name} — {self.created_at}"
+
+
+class LocationSubscription(models.Model):
+    location = models.ForeignKey(
+        Location,
+        on_delete=models.CASCADE,
+        related_name="subscriptions",
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="location_subscriptions",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["location", "user"],
+                name="one_subscription_per_user_per_location",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.location_id and Location.objects.filter(
+            pk=self.location_id, deleted_at__isnull=False
+        ).exists():
+            raise ValidationError({
+                "location": "Не можна підписатися на видалену локацію."
+            })
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.user} — {self.location}"
