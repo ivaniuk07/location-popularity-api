@@ -1,0 +1,16 @@
+asgiref==3.12.1
+async-timeout==5.0.1
+Django==5.2.18
+django-environ==0.14.0
+django-filter==26.2
+django-redis==7.0.0
+djangorestframework==3.18.3
+numpy==2.4.6
+pandas==3.0.6
+psycopg==3.3.6
+psycopg-binary==3.3.6
+python-dateutil==2.9.0.post0
+redis==8.1.0
+six==1.17.0
+sqlparse==0.6.0
+typing_extensions==4.16.0
